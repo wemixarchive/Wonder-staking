@@ -24,6 +24,11 @@ contract NCPStakingGateway is OwnableUpgradeable, INCPGateway {
     IWithdrawalNFT public withdrawalNFT;
     INCPStaking public NCPStaking;
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(
         address _ncpStaking,
         address _governance,
@@ -60,11 +65,10 @@ contract NCPStakingGateway is OwnableUpgradeable, INCPGateway {
 
             uint256 ratio = IGovStaking(govStaking)
                 .calcVotingWeightWithScaleFactor(pool.ncp, 10000);
-            uint256 poolTotalRewardAPR = (((totalRewardAPR * ratio) /
-                10000) * 1 ether) / pool.totalDeposit;
+            uint256 poolTotalRewardAPR = ((totalRewardAPR * ratio) * 1 ether) / 10000 / pool.totalDeposit;
             uint256 apr =
-                (((poolTotalRewardAPR * (10000 - platformFeeRatio)) / 10000) *
-                    (10000 - pool.feeRatio)) /
+                ((poolTotalRewardAPR * (10000 - platformFeeRatio))  *
+                    (10000 - pool.feeRatio)) / 10000 /
                 10000;
 
             address rewarder = INCPStaking(ncpStaking).getRewarder(i);
@@ -107,7 +111,7 @@ contract NCPStakingGateway is OwnableUpgradeable, INCPGateway {
                 .getUserInfo(i, user);
             if (userInfo.amount == 0 ) continue; 
             uint256 blockElapsed = (block.number - userInfo.lastRewardClaimed);
-            uint256 apy = blockElapsed == 0 ? 0 : (userInfo.pendingReward * SECONDS_PER_YEAR  * 10000) / userInfo.amount / blockElapsed;
+            uint256 apy = blockElapsed == 0 ? 0 : (userInfo.pendingReward * SECONDS_PER_YEAR  * 1 ether) / userInfo.amount / blockElapsed;
             userInfos[index++] = UserInfo({
                 pid : i,
                 depositAmount : userInfo.amount,
@@ -226,24 +230,16 @@ contract NCPStakingGateway is OwnableUpgradeable, INCPGateway {
     function computePoolAPY(uint256 pid) public view returns (uint256) {
         uint256 SECONDS_PER_YEAR = 31536000;
         uint256 BASE_ETHER = 10 ** 36;
-        uint256 ONE_ETHER = 1 ether;
 
-        uint256 n = SECONDS_PER_YEAR;
-
-        if (n == 0) return ONE_ETHER;
-
-        uint256 x = (computePoolAPR(pid) / SECONDS_PER_YEAR) * 10 ** 18;
-
-        uint256 x2 = (x * x) / BASE_ETHER;
-        uint256 x3 = (x2 * x) / BASE_ETHER;
+        uint256 x = computePoolAPR(pid) * 10 ** 18 / SECONDS_PER_YEAR ;
 
         return
             (BASE_ETHER +
-                n *
+                SECONDS_PER_YEAR *
                 x +
-                (n * (n - 1) * x2) /
+                (SECONDS_PER_YEAR * (SECONDS_PER_YEAR - 1) * (x * x) / BASE_ETHER) /
                 2 +
-                (n * (n - 1) * (n - 2) * x3) /
+                (SECONDS_PER_YEAR * (SECONDS_PER_YEAR - 1) * (SECONDS_PER_YEAR - 2) * (x * x * x) / BASE_ETHER) /
                 6) / 10 ** 18;
     }
 
@@ -259,8 +255,8 @@ contract NCPStakingGateway is OwnableUpgradeable, INCPGateway {
             uint256 poolTotalRewardAPR = (getTotalRewardAPR() * 1 ether) /
                 stakedLP;
             apr =
-                (((poolTotalRewardAPR * (10000 - platformFeeRatio)) / 10000) *
-                    (10000 - pool.feeRatio)) /
+                ((poolTotalRewardAPR * (10000 - platformFeeRatio)) *
+                    (10000 - pool.feeRatio)) / 10000 /
                 10000;
         }
     }
@@ -276,7 +272,7 @@ contract NCPStakingGateway is OwnableUpgradeable, INCPGateway {
         uint256 totalReward = IEnvStorage(envStorage).getBlockRewardAmount();
         uint256 denominator = IEnvStorage(envStorage).DENOMINATOR();
         poolTotalRewardAPR = ((totalReward *
-            getStakingBlockRewardDistribution) / denominator) * 31536000;
+            getStakingBlockRewardDistribution)) * 31536000 / denominator;
     }
 
     /*User Info functions */
@@ -492,4 +488,11 @@ contract NCPStakingGateway is OwnableUpgradeable, INCPGateway {
                 .claimableTime;
         }
     }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[49] private __gap;
 }

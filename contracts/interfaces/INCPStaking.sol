@@ -110,17 +110,13 @@ interface INCPStaking {
     /* =========== SET FUNCTIONS =========== */
 
     /**
-     * @notice Update the given pool's reward point and `IRewarder` contract. Can only be called by the owner.
+     * @notice Changed fee collector. only rewarder owner can change it's fee collector.
      * @param pid The index of the pool. See `poolInfo`.
      * @param _feeCollector Address of the fee collector.
-     * @param _rewarder Address of the rewarder delegate.
-     * @param _feeRatio The withdrawal fee ratio.
      */
-    function set(
+    function setFeeCollector(
         uint256 pid,
-        address _feeCollector,
-        IRewarder _rewarder,
-        uint256 _feeRatio
+        address _feeCollector
     ) external;
 
     function setPoolBreaker(uint256 pid, address _breaker) external;
@@ -405,6 +401,11 @@ interface INCPStaking {
     );
     event SetRewardFeeRatio(uint256 pid, uint256 prev, uint256 curr);
     event SetPlatformFeeRatio(uint256 prev, uint256 curr);
+
+    event SetWithdrawalNFT(address prev, address curr);
+    event SetRewardFeeRatioRequestDelay(uint256 prev, uint256 curr);
+
+
 
     ///TODO updateMP event
     // result updated mp value and pendingReward

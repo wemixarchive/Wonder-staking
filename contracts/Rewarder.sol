@@ -35,6 +35,11 @@ contract Rewarder is IRewarder, OwnableUpgradeable {
         _;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(address _govStaking, address _staking, address _ncp) public initializer {
         __Ownable_init();
         govStaking = _govStaking;
@@ -76,30 +81,16 @@ contract Rewarder is IRewarder, OwnableUpgradeable {
         return lastRewardAmount;
     }
 
-    function emergencyExit(address payable to) external onlyOwner {
-        to.transfer(address(this).balance);
-    }
-
-    function setStaking(address _staking) external onlyOwner {
-        staking = _staking;
-    }
-
-    function setGovStaking(address _govStaking) external onlyOwner {
-        govStaking = _govStaking;
-    }
-
-    function setNCP(address _ncp) external onlyOwner {
-        ncp = _ncp;
-    }
-
     function addRewarder(address _rewarder) external onlyOwner {
         rewarderCount++;
         isRewarder[_rewarder] = rewarderCount;
+        emit SetRewarder(_rewarder, true);
     }
 
     function removeRewarder(address _rewarder) external onlyOwner {
         isRewarder[_rewarder] = 0;
         rewarderCount--;
+        emit SetRewarder(_rewarder, false);
     }
 
     function checkRewarder(address _rewarder) external view returns (uint256) {
@@ -109,4 +100,11 @@ contract Rewarder is IRewarder, OwnableUpgradeable {
     function checkOwner(address _owner) external view returns (bool) {
         return owner() == _owner;
     }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[49] private __gap;
 }

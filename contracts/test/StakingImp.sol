@@ -395,7 +395,7 @@ abstract contract Initializable {
 
 // OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 /**
  * @dev Provides information about the current execution context, including the
@@ -435,7 +435,7 @@ abstract contract ContextUpgradeable is Initializable {
 
 // OpenZeppelin Contracts (last updated v4.7.0) (access/Ownable.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 
 /**
@@ -532,7 +532,7 @@ abstract contract OwnableUpgradeable is Initializable, ContextUpgradeable {
 
 // OpenZeppelin Contracts (last updated v4.8.0) (security/ReentrancyGuard.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 /**
  * @dev Contract module that helps prevent reentrant calls to a function.
@@ -616,7 +616,7 @@ abstract contract ReentrancyGuardUpgradeable is Initializable {
 
 // OpenZeppelin Contracts (last updated v4.5.0) (interfaces/draft-IERC1822.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 /**
  * @dev ERC1822: Universal Upgradeable Proxy Standard (UUPS) documents a method for upgradeability through a simplified
@@ -640,7 +640,7 @@ interface IERC1822Proxiable {
 
 // OpenZeppelin Contracts v4.4.1 (proxy/beacon/IBeacon.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 /**
  * @dev This is the interface that {BeaconProxy} expects of its beacon.
@@ -908,7 +908,7 @@ library Address {
 
 // OpenZeppelin Contracts (last updated v4.7.0) (utils/StorageSlot.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 /**
  * @dev Library for reading and writing primitive types to specific storage slots.
@@ -1187,7 +1187,7 @@ abstract contract ERC1967Upgrade {
 
 // OpenZeppelin Contracts (last updated v4.8.0) (proxy/utils/UUPSUpgradeable.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 
 /**
@@ -1282,7 +1282,7 @@ abstract contract UUPSUpgradeable is IERC1822Proxiable, ERC1967Upgrade {
 // File contracts/interface/IGov.sol
 
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 interface IGov {
     function isVoter(address addr) external view returns (bool);
@@ -1304,7 +1304,7 @@ interface IGov {
 // File contracts/interface/IRegistry.sol
 
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 
 interface IRegistry {
@@ -1315,7 +1315,7 @@ interface IRegistry {
 // File contracts/GovChecker.sol
 
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 
 
@@ -1409,7 +1409,7 @@ contract GovChecker is OwnableUpgradeable {
 // File contracts/interface/IEnvStorage.sol
 
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 
 interface IEnvStorage {
@@ -1451,7 +1451,7 @@ interface IEnvStorage {
 
 
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 /// @author @seunghwalee
 interface INCPStaking {
@@ -1469,7 +1469,7 @@ interface INCPStaking {
 // File contracts/interface/IStaking.sol
 
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 
 interface IStaking {
@@ -1496,7 +1496,7 @@ interface IStaking {
 // File contracts/StakingImp.sol
 
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 // import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 

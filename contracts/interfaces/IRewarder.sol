@@ -17,4 +17,5 @@ interface IRewarder {
 
     function checkOwner(address _owner) external view returns (bool);
     event LogOnReward(address to, uint256 amount, address feeCollector, uint256 fee, address platform, uint256 platformFee);
+    event SetRewarder(address rewarder, bool isRewarder);
 }

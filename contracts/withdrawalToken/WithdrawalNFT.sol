@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -21,6 +21,11 @@ contract WithdrawalNFT is ERC721Upgradeable, IWithdrawalNFT, OwnableUpgradeable 
         _;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(address _minter) public initializer {
         __ERC721_init("NCP-Staking", "NST");
         __Ownable_init();
@@ -35,14 +40,16 @@ contract WithdrawalNFT is ERC721Upgradeable, IWithdrawalNFT, OwnableUpgradeable 
         currentTokenId += 1;
         _mint(to, currentTokenId);
         withdrawalRequests[currentTokenId] = WithdrawalRequestInfo(currentTokenId, pid, toPid, amount, block.number, block.number + unbondTime, to);
+        emit Mint(currentTokenId, pid, toPid, amount, block.number, block.number + unbondTime, to);
         return currentTokenId;
     }
 
-    function burn(address from, uint256 tokenId) public {
+    function burn(address from, uint256 tokenId) public onlyMinter {
         require(_isApprovedOrOwner(from, tokenId), "WithdrawalNFT: caller is not owner nor approved");
         require(block.number >= withdrawalRequests[tokenId].claimableTime, "WithdrawalNFT: unbond time not reached");
         _burn(tokenId);
         delete withdrawalRequests[tokenId];
+        emit Burn(from, tokenId);
         totalSupply -= 1;
     }
 
@@ -127,5 +134,10 @@ contract WithdrawalNFT is ERC721Upgradeable, IWithdrawalNFT, OwnableUpgradeable 
         return withdrawableTokenListTrimmed;
     }
 
-    
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[49] private __gap;
 }

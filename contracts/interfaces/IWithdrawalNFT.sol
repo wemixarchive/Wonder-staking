@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 
@@ -44,4 +44,7 @@ interface IWithdrawalNFT is IERC721Upgradeable {
 
     function getFirstWithdrawableToken(uint256 pid, address user) external view returns(uint256);
     function getWithdrawableTokenListWithPid(uint256 pid, address user) external view returns(uint256[] memory);
+
+    event Mint(uint256 tokenId, uint256 pid, uint256 toPid, uint256 amount, uint256 mintTime, uint256 unbondTime, address drawer);
+    event Burn(address from, uint256 tokenId);
 }

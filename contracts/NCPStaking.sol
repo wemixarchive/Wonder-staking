@@ -11,8 +11,6 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 
-import "hardhat/console.sol";
-
 /// @author @seunghwalee
 contract NCPStaking is
     INCPStaking,
@@ -37,6 +35,7 @@ contract NCPStaking is
      */
     mapping(uint256 /* ncp idx */ => IRewarder) private rewarders;
     uint256 private rewarderLength;
+    mapping(address /* rewarder address */ => bool /* check duplicate */) public isRewarder;
 
     /**
      * @notice Info of each user that stakes LP tokens.
@@ -92,17 +91,22 @@ contract NCPStaking is
 
     /**
      * @notice Fee ratio change duration.
-     *        If reward contract owner request fee ratio change, then this contract will wait feeRationRequestDelay block number.
+     *        If reward contract owner request fee ratio change, then this contract will wait feeRatioRequestDelay block number.
      */
-    uint256 public feeRationRequestDelay;
+    uint256 public feeRatioRequestDelay;
 
     uint256 public platformFeeRatio;
     address public platformFeeCollector;
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(
         address _governance,
         address _governanceStaking,
-        uint256 _feeRationRequestDelay,
+        uint256 _feeRatioRequestDelay,
         address _platformFeeCollector
     ) external initializer {
         multiplierPointBasis = 1000;
@@ -110,7 +114,7 @@ contract NCPStaking is
         _version = 1;
         governance = _governance;
         governanceStaking = _governanceStaking;
-        feeRationRequestDelay = _feeRationRequestDelay;
+        feeRatioRequestDelay = _feeRatioRequestDelay;
         platformFeeCollector = _platformFeeCollector;
 
         __Ownable_init();
@@ -156,6 +160,8 @@ contract NCPStaking is
      * @param _withdrawalNFT Address of withdrawalNFT contract.
      */
     function setWithdrawalNFT(address _withdrawalNFT) external onlyOwner {
+        emit SetWithdrawalNFT(address(withdrawalNFT), _withdrawalNFT);
+
         withdrawalNFT = IWithdrawalNFT(_withdrawalNFT);
     }
 
@@ -172,12 +178,16 @@ contract NCPStaking is
 
     /**
      * @notice Set duration of fee ratio change.
-     * @param _feeRationRequestDelay Block number of fee ratio change duration.
+     * @param _feeRatioRequestDelay Block number of fee ratio change duration.
      */
-    function setRewardFeeRationRequestDelay(
-        uint256 _feeRationRequestDelay
+    function setRewardFeeRatioRequestDelay(
+        uint256 _feeRatioRequestDelay
     ) external onlyOwner {
-        feeRationRequestDelay = _feeRationRequestDelay;
+        emit SetRewardFeeRatioRequestDelay(
+            feeRatioRequestDelay,
+            _feeRatioRequestDelay
+        );
+        feeRatioRequestDelay = _feeRatioRequestDelay;
     }
 
     /**
@@ -212,7 +222,6 @@ contract NCPStaking is
 
     /**
      * @notice Add a new LP to the pool. Can only be called by the owner.
-     * DO NOT add the same LP token more than once. Rewards will be messed up if you do.
      * @param _ncp Address of ncp.
      * @param _feeCollector Address of the fee collector.
      * @param _rewarder Address of the rewarders delegate.
@@ -243,11 +252,13 @@ contract NCPStaking is
             address(_ncp) != address(0) && address(_rewarder) != address(0),
             "Staking::add: INVALID_ADDRESS."
         );
+        require(!isRewarder[address(_rewarder)], "Rewarder address is duplicated.");
 
         uint256 ncpIdx = IGov(governance).getNodeIdxFromMember(_ncp);
-        require(ncpIdx != 0, "Staking::add: INVALID_NCP.");
+        require(ncpIdx != 0 && poolInfo[ncpIdx].ncp == address(0), "Staking::add: INVALID_NCP.");
 
         rewarders[ncpIdx] = _rewarder;
+        isRewarder[address(_rewarder)] = true;
         rewarderLength++;
         (bytes memory _name, , , ) = IGov(governance).getNode(ncpIdx);
         // console.log(_activatedMP);
@@ -285,32 +296,18 @@ contract NCPStaking is
     /* =========== SET FUNCTIONS =========== */
 
     /**
-     * @notice Update the given pool's reward point and `IRewarder` contract. Can only be called by the owner.
-     * @param pid The index of the pool. See `poolInfo`.
+     * @notice Changed fee collector. only rewarder owner can change it's fee collector.
+     * @param pid The index of the pool. See _poolInfo.
      * @param _feeCollector Address of the fee collector.
-     * @param _rewarder Address of the rewarder delegate.
-     * @param _feeRatio The reward fee ratio.
      */
-    function set(
+    function setFeeCollector(
         uint256 pid,
-        address _feeCollector,
-        IRewarder _rewarder,
-        uint256 _feeRatio
-    ) external onlyNCP checkPoolExists(pid) whenNotLock(pid) {
-        require(
-            address(_rewarder) != address(0),
-            "Staking::add: INVALID_ADDRESS."
-        );
-        updatePool(pid);
-        if (rewarders[pid] != _rewarder) {
-            rewarders[pid] = _rewarder;
-        }
-        if (poolInfo[pid].feeCollector != _feeCollector) {
-            poolInfo[pid].feeCollector = _feeCollector;
-        }
+        address _feeCollector
+    ) external onlyRewarderOwner(pid) checkPoolExists(pid) {
+        require(_feeCollector != address(0) && poolInfo[pid].feeCollector != _feeCollector , "Staking::setFeeCollector: SAME_FEE_COLLECTOR.");
 
-        poolInfo[pid].feeRatio = _feeRatio;
-        emit LogSetPool(pid, _rewarder, _feeCollector, _feeRatio);
+        emit SetFeeCollector(poolInfo[pid].feeCollector , _feeCollector);
+        poolInfo[pid].feeCollector = _feeCollector;
     }
 
     function setRewardFeeRatioRequest(
@@ -325,7 +322,7 @@ contract NCPStaking is
             );
         }else{
             require(
-                _feeRatio < FEE_PRECISION
+                _feeRatio < FEE_PRECISION,
                 "Staking::setRewardFeeRatioRequest: INVALID_FEE_RATIO."
             );
         }
@@ -333,7 +330,7 @@ contract NCPStaking is
             pid,
             poolInfo[pid].feeRatio,
             _feeRatio,
-            block.number + feeRationRequestDelay
+            block.number + feeRatioRequestDelay
         );
         feeRatioRequests[pid] = FeeRatioRequestInfo({
             ratio: _feeRatio,
@@ -345,7 +342,7 @@ contract NCPStaking is
         uint256 pid
     ) external onlyRewarderOwner(pid) checkPoolExists(pid) whenNotLock(pid) {
         require(
-            feeRatioRequests[pid].requestBlockNumber + feeRationRequestDelay <=
+            feeRatioRequests[pid].requestBlockNumber + feeRatioRequestDelay <=
                 block.number,
             "STAKING: FeeRatio request is not ready."
         );
@@ -759,7 +756,19 @@ contract NCPStaking is
         uint256 amount,
         address payable to
     ) external payable nonReentrant onlyGovStaking {
-        _deposit(ncpToIdx[to], amount, payable(to), false);
+        uint256 pid = ncpToIdx[to];
+        _deposit(pid, amount, payable(to), false);
+        
+        emit Deposit(to, pid, amount, to, userInfo[pid][to].pendingReward);
+        emit NCPDeposit(
+            to,
+            pid,
+            poolInfo[pid].name,
+            poolInfo[pid].ncp,
+            amount,
+            to,
+            userInfo[pid][to].pendingReward
+        );
     }
 
     function ncpWithdraw(
@@ -771,7 +780,6 @@ contract NCPStaking is
         nonReentrant
         onlyGovStaking
     {
-        console.log("ok %s", msg.sender);
         uint256 pid = ncpToIdx[to];
         uint256 toPid = pid;
         PoolInfo memory pool = updatePool(pid);
@@ -784,7 +792,7 @@ contract NCPStaking is
         // }
 
         if (user.amount > 0) {
-            _harvest(pid, payable(msg.sender), to, false, true);
+            _harvest(pid, to, to, false, true);
         }
         (pool, mpInfo) = _updateMP(pid, msg.sender);
         uint256 reductionMP = (mpInfo.staked * amount) / user.amount;
@@ -1323,4 +1331,11 @@ contract NCPStaking is
         if ((lpAmount + mpAmount) == 0) return 0;
         return (pendingRewardAmount * lpAmount) / (lpAmount + mpAmount);
     }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[49] private __gap;
 }
