@@ -46,6 +46,14 @@ task("reward-balance", "check reward balance")
         await checkRewardBalanceByBlockNumber(hre, parseInt(args.blockNumber), parseInt(args.ncpId));
     });
 
+task("gained-reward", "check gained reward")
+    .addParam("ncpId", "ncp id")
+    .addParam("blockNumber", "block number")
+    .setAction(async (args, hre) => {
+        const { checkGainRewardByBlockNumber } = await import("./scripts/checkBalance");
+        await checkGainRewardByBlockNumber(hre, parseInt(args.blockNumber), parseInt(args.ncpId));
+    });
+
 const config: HardhatUserConfig = {
     solidity: {
         version: "0.8.9",

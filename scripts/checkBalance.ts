@@ -151,3 +151,34 @@ export async function checkRewardBalanceByBlockNumber(hre : HardhatRuntimeEnviro
     const pendingRewardUser = totalReward.sub(pendingRewardNCP);
     console.log("User reward : ", hre.ethers.utils.formatEther(pendingRewardUser));
 }
+
+export async function checkGainRewardByBlockNumber(hre : HardhatRuntimeEnvironment, blockNumber : number, pid : number){
+    const ncpStaking = await hre.ethers.getContractAt("NCPStaking", NCPSTAKING, );
+    const ncpInfo = await ncpStaking.getPoolInfo(pid, {blockTag: blockNumber-1});
+    const rewarder = await ncpStaking.getRewarder(pid, {blockTag: blockNumber-1});
+    const totalReward = await hre.ethers.provider.getBalance(rewarder, blockNumber -1);
+    const pendingRewardNCP = await ncpStaking.pendingReward(pid, ncpInfo.ncp, {blockTag: blockNumber-1});
+    const pendingRewardUser = totalReward.sub(pendingRewardNCP);
+
+    const harvestEvents = await ncpStaking.queryFilter(ncpStaking.filters.Harvest(null, pid, null), blockNumber-1, blockNumber);
+    let sum = ethers.BigNumber.from(0);
+    let ncpSum = ethers.BigNumber.from(0);
+    for (let event of harvestEvents) {
+        const reward = event.args.amount;
+        sum = sum.add(reward);
+        if (event.args.user == ncpInfo.ncp) {
+            ncpSum = ncpSum.add(reward);
+        }
+    }
+
+    const afterncpInfo = await ncpStaking.getPoolInfo(pid, {blockTag: blockNumber});
+    const afterrewarder = await ncpStaking.getRewarder(pid, {blockTag: blockNumber});
+    const aftertotalReward = await hre.ethers.provider.getBalance(rewarder, blockNumber);
+    const afterpendingRewardNCP = await ncpStaking.pendingReward(pid, ncpInfo.ncp, {blockTag: blockNumber});
+    const afterpendingRewardUser = totalReward.sub(pendingRewardNCP);
+
+    const gainedReward = aftertotalReward.add(sum).sub(totalReward);
+    console.log("Total gained reward : ", hre.ethers.utils.formatEther(gainedReward));
+    const gainedRewardNCP = afterpendingRewardNCP.add(ncpSum).sub(pendingRewardNCP);
+    console.log("NCP gained reward : ", hre.ethers.utils.formatEther(gainedRewardNCP));
+}
