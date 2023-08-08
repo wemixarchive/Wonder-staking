@@ -155,11 +155,9 @@ export async function checkRewardBalanceByBlockNumber(hre : HardhatRuntimeEnviro
 export async function checkGainRewardByBlockNumber(hre : HardhatRuntimeEnvironment, blockNumber : number, pid : number){
     const ncpStaking = await hre.ethers.getContractAt("NCPStaking", NCPSTAKING, );
     const ncpInfo = await ncpStaking.getPoolInfo(pid, {blockTag: blockNumber-1});
-    const ncpncpInfo = await ncpStaking.getUserInfo(pid, ncpInfo.ncp, {blockTag: blockNumber-1});
     const rewarder = await ncpStaking.getRewarder(pid, {blockTag: blockNumber-1});
+    
     const totalReward = await hre.ethers.provider.getBalance(rewarder, blockNumber -1);
-
-    const pendingReward = await ncpStaking.pendingReward(pid, ncpInfo.ncp, {blockTag: blockNumber-1});
 
     const harvestEvents = await ncpStaking.queryFilter(ncpStaking.filters.Harvest(null, pid, null), blockNumber, blockNumber);
     let sum = ethers.BigNumber.from(0);
@@ -175,7 +173,6 @@ export async function checkGainRewardByBlockNumber(hre : HardhatRuntimeEnvironme
     const afterncpInfo = await ncpStaking.getPoolInfo(pid, {blockTag: blockNumber});
 
     const afterncpncpInfo = await ncpStaking.getUserInfo(pid, ncpInfo.ncp, {blockTag: blockNumber});
-    const afterpendingReward = await ncpStaking.pendingReward(pid, ncpInfo.ncp, {blockTag: blockNumber});
 
     const afterrewarder = await ncpStaking.getRewarder(pid, {blockTag: blockNumber});
     if(rewarder != afterrewarder){
@@ -185,17 +182,9 @@ export async function checkGainRewardByBlockNumber(hre : HardhatRuntimeEnvironme
     const aftertotalReward = await hre.ethers.provider.getBalance(rewarder, blockNumber);
     
     const gainedReward = aftertotalReward.add(sum).sub(totalReward);
-    console.log("Total reward :\t", hre.ethers.utils.formatEther(gainedReward));
-    let ncpReward = afterpendingReward.add(ncpSum).sub(pendingReward);
-    if(ncpReward.eq(0)){
-        const afterAfterpendingReward = await ncpStaking.pendingReward(pid, ncpInfo.ncp, {blockTag: blockNumber+1});
-        ncpReward = (afterAfterpendingReward.add(ncpSum).sub(afterpendingReward)).div(2);
-    }
+    console.log(`totalReward :\t${ethers.utils.formatEther(gainedReward)}`);
 
-    const beforeBeforependingReward = await ncpStaking.pendingReward(pid, ncpInfo.ncp, {blockTag: blockNumber-2});
-    if(beforeBeforependingReward.eq(pendingReward)){
-        ncpReward = ncpReward.div(2);
-    }
+    let ncpReward = gainedReward.mul(afterncpncpInfo.amount).div(afterncpInfo.totalDeposit);
 
     console.log("ncp reward :\t", ethers.utils.formatEther(ncpReward), "\t");
     console.log("user reward :\t", ethers.utils.formatEther(gainedReward.sub(ncpReward)));
